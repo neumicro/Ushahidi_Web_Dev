@@ -52,15 +52,20 @@ class Incidents_Api_Object extends Api_Object_Core {
 	 */
 	public function perform_task()
 	{
-		// Check if the 'by' parameter has been specified
-		if ( ! $this->api_service->verify_array_index($this->request, 'by'))
+		// check if the search parameter has been speciified
+		if ($this->api_service->verify_array_index($this->request, 'search'))
 		{
-			// Set "all" as the default method for fetching incidents
-			$this->by = 'all';
+			$this->by = 'search';
+		}
+		// Check if the 'by' parameter has been specified
+		else if ($this->api_service->verify_array_index($this->request, 'by'))
+		{
+			$this->by = $this->request['by'];
 		}
 		else
 		{
-			$this->by = $this->request['by'];
+			// Set "all" as the default method for fetching incidents
+			$this->by = 'all';
 		}
 		
 		// Check optional parameters
@@ -73,7 +78,18 @@ class Incidents_Api_Object extends Api_Object_Core {
 			case "all":
 				$this->response_data = $this->_get_incidents();
 			break;
-
+	
+			case "search":
+				/* prevent SQL injection */
+				$search = mysql_real_escape_string($this->request['search']);
+			
+				$params = array(
+					'UPPER(i.incident_title) LIKE UPPER(\'%'.$search.'%\')',
+					'UPPER(i.incident_description) LIKE UPPER(\'%'.$search.'%\')'
+				);
+				$this->response_data = $this->_get_incidents($params);
+			break;
+			
 			// Get specific incident by ID
 			case "incidentid":
 				if ( ! $this->api_service->verify_array_index($this->request, 'id'))

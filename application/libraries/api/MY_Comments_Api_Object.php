@@ -26,8 +26,13 @@ class Comments_Api_Object extends Api_Object_Core {
     
     public function perform_task()
     {
+		// check if the search parameter has been speciified
+		if ($this->api_service->verify_array_index($this->request, 'search'))
+		{
+			$this->response_data = $this->_get_search_comments($this->request['search']);
+		}
         // by request
-        if($this->api_service->verify_array_index($this->request, 'by') )
+        else if($this->api_service->verify_array_index($this->request, 'by') )
         {
             $this->by = $this->request['by'];
 
@@ -161,7 +166,6 @@ class Comments_Api_Object extends Api_Object_Core {
      */
     private function _get_comment_list($where, $limit = '') 
     {
-       
         $xml = new XMLWriter();
         $json = array();
         $json_item = array();
@@ -264,6 +268,27 @@ class Comments_Api_Object extends Api_Object_Core {
     private function _get_all_comments()
     {
         $where = "\nWHERE comment_spam = 0";
+        $where .= "\nORDER BY comment_date DESC";
+        $limit = "\nLIMIT 0, $this->list_limit";
+
+        return $this->_get_comment_list($where, $limit); 
+    }
+    
+    /**
+     * List comments submited to Ushahidi matching the search parameter
+     * 
+     * @param string response_type - The format of the response needed. 
+     * XML or JSON
+     *
+     * @return array
+     */
+    private function _get_search_comments($search)
+    {
+		/* prevent SQL injection */
+		$search = mysql_real_escape_string($search);
+		
+        $where = "\nWHERE comment_spam = 0 AND ";
+		$where .= "UPPER(comment_description) LIKE UPPER('%$search%')";
         $where .= "\nORDER BY comment_date DESC";
         $limit = "\nLIMIT 0, $this->list_limit";
 
